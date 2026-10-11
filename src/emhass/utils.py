@@ -465,6 +465,7 @@ def resolve_thermal_battery_cop(
     hc: dict,
     outdoor_temperature_forecast: Sequence[float] | np.ndarray | pd.Series | None,
     length: int | None = None,
+    hp_input_temperature_forecast: np.ndarray | pd.Series | None = None,
 ) -> np.ndarray:
     """
     Resolve the per-timestep energy-conversion factor for a thermal_battery heat source.
@@ -491,6 +492,7 @@ def resolve_thermal_battery_cop(
         ``outdoor_temperature_forecast`` is ``None``; otherwise truncates or
         passes through the forecast length when set, or returns the full forecast
         length when unset.
+    :param hp_input_temperature_forecast: Temperature input for the heat pump
     :return: Numpy array of conversion factors, one per timestep.
     """
     if "efficiency" in hc and hc["efficiency"] is not None:
@@ -523,10 +525,17 @@ def resolve_thermal_battery_cop(
                 "'supply_temperature' (constant heat-pump mode), or 'heating_curve' "
                 "(weather-compensated heat-pump mode)"
             )
+
+    # Checking if heat pump input temperatures are passed
+    if hp_input_temperature_forecast is None:
+        hp_input = outdoor_temperature_forecast
+    else:
+        hp_input = hp_input_temperature_forecast
+    
     cops = calculate_cop_heatpump(
         supply_temperature=supply_temperature,
         carnot_efficiency=hc.get("carnot_efficiency", 0.4),
-        outdoor_temperature_forecast=outdoor_temperature_forecast,
+        outdoor_temperature_forecast=hp_input,
         mode=normalize_heat_cool_mode(
             hc.get("sense") or "heat",
             field_name="sense",

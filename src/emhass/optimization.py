@@ -1495,6 +1495,14 @@ class Optimization:
             # Get outdoor temperature forecast
             outdoor_temp = self._get_clean_outdoor_temp(data_opt, n)
 
+            # Get heat pump input temperature
+            hp_input = None
+            if 'zlt_temperature_forecast' in data_opt.columns:
+                water_temp_forecast = self._get_clean_list("water_temperature_forecast", data_opt=data_opt)
+                hp_input = np.array(
+                            [15.0 if (x is None or pd.isna(x)) else float(x) for x in water_temp_forecast]
+                )
+
             if thermal_type == "thermal_config" and "thermal_config" in cfg:
                 hc = cfg["thermal_config"]
 
@@ -1556,7 +1564,7 @@ class Optimization:
 
                 # Conversion factors per timestep (Carnot COP for heat pumps,
                 # flat value for constant-efficiency sources like gas boilers).
-                heatpump_cops = utils.resolve_thermal_battery_cop(hc, outdoor_temp, length=n)
+                heatpump_cops = utils.resolve_thermal_battery_cop(hc, outdoor_temp, length=n, hp_input_temperature_forecast = hp_input)
                 params["heatpump_cops"].value = np.array(heatpump_cops)
 
                 # Thermal losses and heating demand
@@ -3761,8 +3769,15 @@ class Optimization:
             params["outdoor_temp"].value = outdoor_temp_arr
             start_temp_float = float(params["start_temp"].value)
 
+            hp_input = None
+            if 'zlt_temperature_forecast' in data_opt.columns:
+                water_temp_forecast = self._get_clean_list("water_temperature_forecast", data_opt=data_opt)
+                hp_input = np.array(
+                            [15.0 if (x is None or pd.isna(x)) else float(x) for x in water_temp_forecast]
+                )
+
             # Compute and set derived parameter values
-            cops = utils.resolve_thermal_battery_cop(hc, outdoor_temp_arr, length=required_len)
+            cops = utils.resolve_thermal_battery_cop(hc, outdoor_temp_arr, length=required_len, hp_input_temperature_forecast = hp_input)
             params["heatpump_cops"].value = np.array(cops)
 
             # Check for hot water tank mode (draw_off_demand present)
@@ -3885,8 +3900,15 @@ class Optimization:
 
             outdoor_temp_arr = self._get_clean_outdoor_temp(data_opt, required_len)
 
+            hp_input = None
+            if 'zlt_temperature_forecast' in data_opt.columns:
+                water_temp_forecast = self._get_clean_list("water_temperature_forecast", data_opt=data_opt)
+                hp_input = np.array(
+                            [15.0 if (x is None or pd.isna(x)) else float(x) for x in water_temp_forecast]
+                )
+
             heatpump_cops = np.array(
-                utils.resolve_thermal_battery_cop(hc, outdoor_temp_arr, length=required_len)
+                utils.resolve_thermal_battery_cop(hc, outdoor_temp_arr, length=required_len, hp_input_temperature_forecast = hp_input)
             )
 
             # Check for hot water tank mode (draw_off_demand present)
